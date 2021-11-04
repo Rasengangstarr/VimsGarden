@@ -4,17 +4,24 @@ var world = [];
 const worldSizeX = 30;
 const worldSizeY = 10;
 
-const refreshRate = 1000;
-
+var growAudio = new Audio('grow.mp4');
 var plantAudio = new Audio('plant.mp3');
 
+const refreshRate = 1000;
+var rateOfTimePassage = 1000;
+
 var mode = 0;
+
+var paused = false;
 
 var cX = 0;
 var cY = 0;
 
 var bar = document.getElementById('statusbar');
 var elem = document.getElementById('playfield');
+var timeElem = document.getElementById('time');
+
+var time = 0;
 
 // UTILS FROM https://stackoverflow.com/questions/35969656/how-can-i-generate-the-opposite-color-according-to-current-color
 
@@ -55,7 +62,8 @@ window.onload = function init()
             world[y].push({
                 character : '_',
                 fColor : '#000000',
-                bColor : '#ffffff'
+                bColor : '#ffffff',
+                timeCreated : time
             });
         }
     }
@@ -65,10 +73,48 @@ window.onload = function init()
 		fColor : '#ffffff',
 		bColor : '#000000'
 	};
-    let intervalId = window.setInterval(drawWorldToScreen, refreshRate);
+    //let intervalId = window.setInterval(drawWorldToScreen, refreshRate);
+    let intervalId2 = window.setInterval(marchTime, rateOfTimePassage);
 }
 
+function marchTime()
+{
+    if (!paused)
+    {
+        time += 1;
+    }
 
+    for (let y = 0; y < worldSizeY; y++)
+    {
+        for (let x = 0; x < worldSizeY; x++)
+        {
+            let thing = world[y][x];
+
+            //handle seeds
+            if (thing.character == '.')
+            {
+                if(thing.timeWatered != null && time - thing.timeWatered > 10)
+                {
+                    thing.fColor = "#ff0000";
+                }
+                // if its watered, grow
+                if(thing.fColor == "#0000ff")
+                {
+                    thing.growthLevel += 1;
+                }
+                if(thing.growthLevel > 10)
+                {
+                    thing.fColor = '#00ff00';
+                    thing.character = 'f';
+                    growAudio.play();
+                }
+            }
+            world[y][x] = thing;
+        }
+    }
+    timeElem.innerHTML = "<h3> Time: " + time + "</h3>";
+    drawWorldToScreen();
+}
 
 function drawWorldToScreen()
 {
@@ -89,6 +135,10 @@ function drawWorldToScreen()
     {
         bar.innerHTML = "<h2> INSERT </h2>";
     }
+    else if (mode == 2)
+    {
+        bar.innerHTML = "<h2> REPLACE </h2>";
+    }
 }
 
 
@@ -97,11 +147,8 @@ window.addEventListener("keydown", function(evt) {
     switch (event.key)
     {
         case "Escape":
-            if (mode == 1)
-            {
-                mode = 0;
-                
-            }
+            mode = 0;
+            drawWorldToScreen();
             break;
     };
 });
@@ -111,12 +158,15 @@ window.onkeypress = function(evt) {
     evt = evt || window.event;
     var charCode = evt.keyCode || evt.which;
     var charStr = String.fromCharCode(charCode);
-
-    console.log(evt.keyCode);
    		
 	//de-invert the previous cursor character
 	world[cY][cX].fColor = invertColor(world[cY][cX].fColor);
 	world[cY][cX].bColor = invertColor(world[cY][cX].bColor);
+    time += 1;
+    if (charStr == ' ')
+    {
+        evt.preventDefault();
+    }
 
     if (mode == 0)
     { 
@@ -140,21 +190,39 @@ window.onkeypress = function(evt) {
         {
             mode = 1;
         }
+        else if (charStr == 'r')
+        {
+            mode = 2;
+        }
     }
     else if (mode == 1)
     {
-        if (evt.keyCode == 27)
-        {
-            mode = 0;
-        }
-        if (charStr == 's')
+        if (charStr == '.')
         {
             if (world[cY][cX].character == "_")
             {
                 plantSeed();
-                plantAudio.play();
+                if(cX < worldSizeX - 1)
+                {
+                    cX += 1;
+                }
+                   
                 drawWorldToScreen();
             }
+        }
+        else if (charStr == ' ')
+        {
+            if(cX < worldSizeX - 1)
+            {
+                cX += 1;
+            }
+        }
+    }
+    else if (mode == 2)
+    {
+        if (charStr == 'w')
+        {
+            waterSeed();
         }
     }
 
@@ -166,12 +234,22 @@ window.onkeypress = function(evt) {
 			
 };
 
+function waterSeed()
+{
+    world[cY][cX].timeWatered = time;
+    world[cY][cX].fColor = "#0000ff";
+}
+
 function plantSeed()
 {
+    plantAudio.play();
     world[cY][cX] = 
         {
             character : ".",
-            fColor : "#ff0000",
-            bColor : "#ffffff"
+            fColor : "#0000ff",
+            bColor : "#ffffff",
+            growthLevel : 0, 
+            timeCreated : time,
+            timeWatered : time 
         };
 }
