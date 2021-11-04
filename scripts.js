@@ -86,16 +86,21 @@ function marchTime()
 
     for (let y = 0; y < worldSizeY; y++)
     {
-        for (let x = 0; x < worldSizeY; x++)
+        for (let x = 0; x < worldSizeX; x++)
         {
             let thing = world[y][x];
 
             //handle seeds
             if (thing.character == '.')
             {
-                if(thing.timeWatered != null && time - thing.timeWatered > 10)
+                if(time - thing.timeWatered > 10)
                 {
                     thing.fColor = "#ff0000";
+                }                 
+                else
+                {
+                    console.log(thing.timeWatered);
+                    
                 }
                 // if its watered, grow
                 if(thing.fColor == "#0000ff")
